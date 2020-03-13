@@ -1,31 +1,35 @@
 const readline = require('readline');
 const fs = require('fs');
-const HOST = 'https://talkto.glitch.me';
-const socket = require('socket.io-client')(HOST);
+const HOST = 'http://localhost:3000';
 const argv = require('yargs').argv
 let toAddress = 'GENERAL';
-let username = Date.now();
-
-if (argv.username && argv.username != '') {
-  setConfig({ username: argv.username })
-  .finally(() => {
-    process.exit();
-  })  
-}
+let userConfig = {};
+const socketClient = require('socket.io-client')
+let socket;
 
 getConfig()
 .then(configData => {
-  if(configData.username && configData.username != ''){
-    username = configData.username;
-  }
+  userConfig = makeConfigDefaults(configData);
+  socket = socketClient(userConfig.host);
 })
 .catch(error => {})
 .finally(() => {
-  console.log("You are " + username + '.'); 
-  socket.on(username, function(data){
-    console.log('\033[1A' + `\x1b[33mlaa: ${data.text}\x1b[0m`);
+  console.log("You are " + userConfig.username + '.'); 
+  socket.on(userConfig.username, function(data){
+    console.log(`\x1b[33m${data.fromAddress}: ${data.text}\x1b[0m`);
+  });
+  socket.on('connect', function(){
+    console.log('You are online.');
   });
 })
+
+if (argv.username && argv.username != '') {
+  userConfig.username = argv.username;
+  setConfig(userConfig)
+  .finally(() => {
+    process.exit();
+  })
+}
 
 var rl = readline.createInterface({
   input: process.stdin,
@@ -33,13 +37,11 @@ var rl = readline.createInterface({
   terminal: false
 });
 
-socket.on('connect', function(){
-  console.log('You are online.');
-});
+
 
 rl.on('line', function(line){
   console.log('\033[1A' + `\x1b[32mYou: ${line}\x1b[0m`);
-  socket.emit('MESSAGE', { toAddress: 'laa', text: line });
+  socket.emit('MESSAGE', { toAddress, fromAddress: userConfig.username, text: line });
 });
 
 
@@ -50,7 +52,7 @@ if(argv._[0]){
 
 function setConfig(data){
   return new Promise((resolve, reject) => {
-    fs.writeFile('./talkto-config.json', JSON.stringify(data), function (err) {
+    fs.writeFile('./.talkto-config', JSON.stringify(data), function (err) {
       if (err) {
         reject(err.message); 
       }
@@ -61,13 +63,23 @@ function setConfig(data){
 
 function getConfig(){
   return new Promise((resolve, reject) => {
-    fs.readFile('./talkto-config.json', (err, data) => {
+    fs.readFile('./.talkto-config', (err, data) => {
       if(err){
-        reject({});
+        resolve({});
       }
       else{
         resolve(JSON.parse(data));
       }
     })  
   })
+}
+
+function makeConfigDefaults(configData){
+  if(!configData.username || configData.username == ''){
+    configData.username = Date.now()
+  }
+  if(!configData.host || configData.host == ''){
+    configData.host = "https://talkto.glitch.me";
+  }
+  return configData;
 }
