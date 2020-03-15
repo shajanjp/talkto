@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const readline = require('readline');
 const fs = require('fs');
+const HOME_DIRECTORY = require('os').homedir();
 const HOST = 'http://localhost:3000';
 const argv = require('yargs').argv
 let toAddress = 'GENERAL';
@@ -53,7 +54,7 @@ if(argv._[0]){
 
 function setConfig(data){
   return new Promise((resolve, reject) => {
-    fs.writeFile('./.talkto-config', JSON.stringify(data), function (err) {
+    fs.writeFile(`${HOME_DIRECTORY}/.talkto-config`, JSON.stringify(data), function (err) {
       if (err) {
         reject(err.message); 
       }
@@ -64,7 +65,7 @@ function setConfig(data){
 
 function getConfig(){
   return new Promise((resolve, reject) => {
-    fs.readFile('./.talkto-config', (err, data) => {
+    fs.readFile(`${HOME_DIRECTORY}/.talkto-config`, (err, data) => {
       if(err){
         resolve({});
       }
